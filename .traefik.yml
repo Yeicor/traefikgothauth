@@ -2,7 +2,7 @@ displayName: "OIDC auth"
 type: "middleware"
 iconPath: ".assets/icon.png"
 
-import: "github.com/yeicor/traefik-oidc"
+import: "github.com/Yeicor/traefik-oidc"
 
 summary: 'OpenID Connect client (Relying Party) auth for Traefik.'
 
