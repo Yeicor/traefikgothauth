@@ -26,7 +26,10 @@ jobs:
 
     - name: Test (with Yaegi)
       run: |
-        go get -v ./...
-        go mod vendor
+        # Prepare GOPATH
+        export GOPATH=$(pwd)/go
+        mkdir -p "$(go env GOPATH)/src/github.com/${{ github.repository }}"
+        rsync . "$(go env GOPATH)/src/github.com/${{ github.repository }}" --exclude go
+        # Install and run yaegi test
         curl -sfL https://raw.githubusercontent.com/traefik/yaegi/master/install.sh | bash -s -- -d -b . v0.9.0
         ./yaegi test -v .
