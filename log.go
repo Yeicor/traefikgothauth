@@ -1,4 +1,4 @@
-package traefikoidc
+package traefik_oidc
 
 import (
 	"fmt"
@@ -27,11 +27,6 @@ func keyValueToString(prefixIfNotEmpty string, keyValue []interface{}) string {
 	return prefixIfNotEmpty
 }
 
-// logt logs a message with trace level and key-value pairs.
-func logt(msg string, keyValue ...interface{}) {
-	_, _ = os.Stdout.WriteString("[" + appName + "] " + time.Now().Format(time.RFC3339) + " TRACE: " + msg + keyValueToString(" ", keyValue) + "\n")
-}
-
 // logd logs a message with debug level and key-value pairs.
 func logd(msg string, keyValue ...interface{}) {
 	_, _ = os.Stdout.WriteString("[" + appName + "] " + time.Now().Format(time.RFC3339) + " DEBUG: " + msg + keyValueToString(" ", keyValue) + "\n")
@@ -40,11 +35,6 @@ func logd(msg string, keyValue ...interface{}) {
 // logi logs a message with info level and key-value pairs.
 func logi(msg string, keyValue ...interface{}) {
 	_, _ = os.Stdout.WriteString("[" + appName + "] " + time.Now().Format(time.RFC3339) + " INFO: " + msg + keyValueToString(" ", keyValue) + "\n")
-}
-
-// logw logs a message with warning level and key-value pairs.
-func logw(msg string, keyValue ...interface{}) {
-	_, _ = os.Stdout.WriteString("[" + appName + "] " + time.Now().Format(time.RFC3339) + " WARNING: " + msg + keyValueToString(" ", keyValue) + "\n")
 }
 
 // loge logs a message with error level and key-value pairs.

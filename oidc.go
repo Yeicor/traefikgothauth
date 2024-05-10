@@ -1,22 +1,25 @@
-// Package traefikoidc is a Traefik plugin to authenticate requests using OpenID Connect.
-package traefikoidc
+// Package traefik_oidc is a Traefik plugin to authenticate requests using OpenID Connect.
+package traefik_oidc
 
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
-	"github.com/coreos/go-oidc/v3/oidc"
-	"golang.org/x/oauth2"
+	"io"
 	"net/http"
 	"net/url"
 	"regexp"
 	"strings"
+	"time"
 )
 
 // Config configures the OpenID Connect plugin.
 type Config struct {
-	// ProviderURL is the OpenID Connect server's base URL (needs to have a .well-known/openid-configuration endpoint).
-	ProviderURL string `json:"provider_url"`
+	// AuthorizationEndpoint is the OpenID Connect server's authorization endpoint (get it from .../.well-known/openid-configuration).
+	AuthorizationEndpoint string `json:"authorization_endpoint"`
+	// TokenEndpoint is the OpenID Connect server's token endpoint (get it from .../.well-known/openid-configuration).
+	TokenEndpoint string `json:"token_endpoint"`
 	// ClientID is the OAuth2 client ID.
 	ClientID string `json:"client_id"`
 	// ClientSecret is the OAuth2 client secret.
@@ -34,11 +37,11 @@ type Config struct {
 // CreateConfig creates the default plugin configuration.
 func CreateConfig() *Config {
 	return &Config{
-		ProviderURL:  "https://accounts.google.com",
-		RedirectURL:  "/oidc/callback/",
-		Scopes:       oidc.ScopeOpenID,
-		Cookie:       "oidc-auth",
-		ClaimsPrefix: "x-auth-",
+		AuthorizationEndpoint: "https://accounts.google.com/o/oauth2/v2/auth",
+		RedirectURL:           "/oidc/callback/",
+		Scopes:                "openid",
+		Cookie:                "oidc-auth",
+		ClaimsPrefix:          "x-auth-",
 	}
 }
 
@@ -47,18 +50,11 @@ type OIDC struct {
 	next        http.Handler
 	name        string
 	config      *Config
-	provider    *oidc.Provider
 	redirectURL *url.URL
-	verifier    *oidc.IDTokenVerifier
 }
 
 // New created a new OIDC plugin.
 func New(ctx context.Context, next http.Handler, config *Config, name string) (http.Handler, error) {
-	provider, err := oidc.NewProvider(ctx, config.ProviderURL)
-	if err != nil {
-		return nil, fmt.Errorf("failed to query provider %q: %v", config.ProviderURL, err)
-	}
-
 	redirectURL, err := url.Parse(config.RedirectURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse redirect URL %q: %v", config.RedirectURL, err)
@@ -68,9 +64,7 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 		next:        next,
 		name:        name,
 		config:      config,
-		provider:    provider,
 		redirectURL: redirectURL,
-		verifier:    provider.Verifier(&oidc.Config{ClientID: config.ClientID}),
 	}, nil
 }
 
@@ -94,7 +88,7 @@ func (o *OIDC) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	// Check if the cookie is valid, or redirect to OAuth2 provider to refresh it.
-	idToken, err := o.verifier.Verify(req.Context(), authCookie.Value)
+	idToken, err := oauth2Verify(authCookie.Value)
 	if err != nil {
 		logd("Cookie is invalid (expired?)", "error", err)
 		o.handleOAuth2Redirect(rw, req)
@@ -119,15 +113,28 @@ func (o *OIDC) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 func (o *OIDC) handleOAuth2Redirect(rw http.ResponseWriter, req *http.Request) {
 	// Redirect to OAuth2 provider.
-	config := o.oAuth2Config(req)
+	authUrl, err := url.Parse(o.config.AuthorizationEndpoint)
+	if err != nil {
+		loge("Failed to parse authorization endpoint", "error", err)
+		http.Error(rw, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
 	state, err := o.encodeState(req.URL)
 	if err != nil {
 		loge("Failed to encode state", "error", err)
 		http.Error(rw, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
-	logd("Redirecting to OAuth2 provider", "redirect_url", config.RedirectURL, "state", state, "state_url", req.URL)
-	http.Redirect(rw, req, config.AuthCodeURL(state), http.StatusFound)
+	redirectUri := o.redirectUriFor(req).String()
+	query := authUrl.Query()
+	query.Set("response_type", "code")
+	query.Set("client_id", o.config.ClientID)
+	query.Set("redirect_uri", redirectUri)
+	query.Set("scope", o.config.Scopes)
+	query.Set("state", state)
+	authUrl.RawQuery = query.Encode()
+	logd("Redirecting to OAuth2 provider", "auth_url", authUrl, "redirect_uri", redirectUri, "state", state, "state_url", req.URL)
+	http.Redirect(rw, req, authUrl.String(), http.StatusFound)
 }
 
 var invalidHeader = regexp.MustCompile("[^a-zA-Z0-9-]+") // Also removing _ from headers
@@ -135,19 +142,13 @@ func (o *OIDC) handleOAuth2Callback(w http.ResponseWriter, req *http.Request) er
 	logd("Handling OAuth2 callback", "query", req.URL.Query())
 
 	// Verify state and errors.
-	oauth2Token, err := o.oAuth2Config(req).Exchange(req.Context(), req.URL.Query().Get("code"))
+	rawIDToken, err := o.oAuth2Exchange(req, req.URL.Query().Get("code"))
 	if err != nil {
 		return fmt.Errorf("failed to exchange token: %w", err)
 	}
 
-	// Extract the ID Token from OAuth2 token.
-	rawIDToken, ok := oauth2Token.Extra("id_token").(string)
-	if !ok {
-		return fmt.Errorf("no id_token in token response")
-	}
-
 	// Parse and verify ID Token payload.
-	idToken, err := o.verifier.Verify(req.Context(), rawIDToken)
+	idToken, err := oauth2Verify(rawIDToken)
 	if err != nil {
 		return fmt.Errorf("failed to verify ID Token: %w", err)
 	}
@@ -158,7 +159,7 @@ func (o *OIDC) handleOAuth2Callback(w http.ResponseWriter, req *http.Request) er
 	cookie := &http.Cookie{
 		Name:     o.config.Cookie,
 		Value:    rawIDToken,
-		Expires:  idToken.Expiry,
+		Expires:  idToken.expiry(),
 		Path:     "/",                  // Allow all paths to read the cookie.
 		SameSite: http.SameSiteLaxMode, // Allow all subdomains to read the cookie.
 		HttpOnly: true,                 // Prevent JavaScript from reading the cookie.
@@ -176,7 +177,60 @@ func (o *OIDC) handleOAuth2Callback(w http.ResponseWriter, req *http.Request) er
 	return nil
 }
 
-func (o *OIDC) oAuth2Config(req *http.Request) *oauth2.Config {
+func (o *OIDC) oAuth2Exchange(req *http.Request, code string) (string, error) {
+	// Exchange the code for a token.
+	tokenUrl, err := url.Parse(o.config.TokenEndpoint)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse token endpoint: %w", err)
+	}
+	query := tokenUrl.Query()
+	query.Set("grant_type", "authorization_code")
+	query.Set("code", code)
+	query.Set("redirect_uri", o.redirectUriFor(req).String())
+	query.Set("client_id", o.config.ClientID)
+	query.Set("client_secret", o.config.ClientSecret)
+	tokenUrl.RawQuery = query.Encode()
+	logd("Exchanging code for token", "token_url", tokenUrl)
+	resp, err := http.Post(tokenUrl.String(), "application/x-www-form-urlencoded", nil)
+	if err != nil {
+		return "", fmt.Errorf("failed to exchange token: %w", err)
+	}
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			loge("Failed to close response body", "error", err)
+		}
+	}(resp.Body)
+	var tokenResponse struct {
+		IDToken string `json:"id_token"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&tokenResponse); err != nil {
+		return "", fmt.Errorf("failed to decode token response: %w", err)
+	}
+	if tokenResponse.IDToken == "" {
+		return "", fmt.Errorf("token response is empty")
+	}
+	return tokenResponse.IDToken, nil
+}
+
+func oauth2Verify(token string) (idToken, error) {
+	parts := strings.Split(token, ".")
+	if len(parts) != 3 {
+		return idToken{}, fmt.Errorf("invalid token format")
+	}
+	// FIXME: Verify the signature of the token.
+	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		return idToken{}, fmt.Errorf("failed to decode token payload: %w", err)
+	}
+	var idToken idToken
+	if err := json.Unmarshal(payload, &idToken); err != nil {
+		return idToken, fmt.Errorf("failed to unmarshal token payload: %w", err)
+	}
+	return idToken, nil
+}
+
+func (o *OIDC) redirectUriFor(req *http.Request) *url.URL {
 	myRedirectURL := o.redirectURL
 	if myRedirectURL.Host == "" { // In case no host is specified, fill it with the current request's host.
 		if req.TLS != nil {
@@ -186,14 +240,7 @@ func (o *OIDC) oAuth2Config(req *http.Request) *oauth2.Config {
 		}
 		myRedirectURL.Host = req.Host
 	}
-
-	return &oauth2.Config{
-		Endpoint:     o.provider.Endpoint(),
-		ClientID:     o.config.ClientID,
-		ClientSecret: o.config.ClientSecret,
-		RedirectURL:  myRedirectURL.String(),
-		Scopes:       strings.Split(o.config.Scopes, " "),
-	}
+	return myRedirectURL
 }
 
 func (o *OIDC) encodeState(url *url.URL) (string, error) {
@@ -206,4 +253,30 @@ func (o *OIDC) decodeState(state string) (*url.URL, error) {
 		return nil, err
 	}
 	return url.Parse(string(bs))
+}
+
+type idToken struct {
+	Issuer       string                 `json:"iss"`
+	Subject      string                 `json:"sub"`
+	Audience     string                 `json:"aud"`
+	Expiry       int64                  `json:"exp"`
+	IssuedAt     int64                  `json:"iat"`
+	NotBefore    *int64                 `json:"nbf"`
+	Nonce        string                 `json:"nonce"`
+	AtHash       string                 `json:"at_hash"`
+	ClaimNames   map[string]string      `json:"_claim_names"`
+	ClaimSources map[string]claimSource `json:"_claim_sources"`
+}
+
+func (t *idToken) expiry() time.Time {
+	return time.Unix(t.Expiry, 0)
+}
+
+func (t *idToken) Claims(m *map[string]interface{}) error {
+	return nil // TODO: extract all claims from the token.
+}
+
+type claimSource struct {
+	Endpoint    string `json:"endpoint"`
+	AccessToken string `json:"access_token"`
 }

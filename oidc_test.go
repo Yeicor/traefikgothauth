@@ -1,4 +1,4 @@
-package traefikoidc_test
+package traefik_oidc_test
 
 import (
 	"context"

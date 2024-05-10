@@ -10,9 +10,10 @@ import (
 
 func main() {
 	cfg := traefikoidc.CreateConfig()
+	cfg.AuthorizationEndpoint = os.Getenv("OIDC_AUTHORIZATION_ENDPOINT")
+	cfg.TokenEndpoint = os.Getenv("OIDC_TOKEN_ENDPOINT")
 	cfg.ClientID = os.Getenv("OIDC_CLIENT_ID")
 	cfg.ClientSecret = os.Getenv("OIDC_CLIENT_SECRET")
-	cfg.ProviderURL = os.Getenv("OIDC_PROVIDER_URL")
 
 	backend := http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		// Dump the full request as the body of the response
