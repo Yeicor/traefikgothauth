@@ -1,4 +1,4 @@
-package traefik_oidc
+package traefikoidc
 
 import (
 	"fmt"

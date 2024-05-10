@@ -1,5 +1,5 @@
-// Package traefik_oidc is a Traefik plugin to authenticate requests using OpenID Connect.
-package traefik_oidc
+// Package traefikoidc is a Traefik plugin to authenticate requests using OpenID Connect.
+package traefikoidc
 
 import (
 	"context"

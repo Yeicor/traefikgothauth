@@ -2,11 +2,12 @@ displayName: "OIDC auth"
 type: "middleware"
 iconPath: ".assets/icon.png"
 
-import: "github.com/Yeicor/traefik-oidc"
+import: "github.com/Yeicor/traefikoidc"
 
 summary: 'OpenID Connect client (Relying Party) auth for Traefik.'
 
 testData:
-  ProviderURL: "https://accounts.google.com"
+  AuthorizationEndpoint: "https://accounts.google.com"
+  TokenEndpoint: "TODO"
   ClientID: "YOUR_CLIENT"
   ClientSecret: "YOUR_SECRET"
