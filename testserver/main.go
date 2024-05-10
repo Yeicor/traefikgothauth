@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	traefikoidc "github.com/yeicor/traefik-oidc"
+	traefikoidc "github.com/Yeicor/traefik-oidc"
 	"log/slog"
 	"net/http"
 	"os"

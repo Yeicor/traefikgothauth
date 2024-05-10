@@ -2,7 +2,7 @@ package traefikoidc_test
 
 import (
 	"context"
-	traefikoidc "github.com/yeicor/traefik-oidc"
+	traefikoidc "github.com/Yeicor/traefik-oidc"
 	"net/http"
 	"net/http/httptest"
 	"testing"

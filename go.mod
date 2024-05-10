@@ -1,4 +1,4 @@
-module github.com/yeicor/traefik-oidc
+module github.com/Yeicor/traefik-oidc
 
 go 1.22
 
