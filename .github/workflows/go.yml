@@ -26,5 +26,7 @@ jobs:
 
     - name: Test (with Yaegi)
       run: |
+        go get -v ./...
+        go mod vendor
         curl -sfL https://raw.githubusercontent.com/traefik/yaegi/master/install.sh | bash -s -- -d -b . v0.9.0
         ./yaegi test -v .
