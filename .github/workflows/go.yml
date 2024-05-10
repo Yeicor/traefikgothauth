@@ -23,3 +23,8 @@ jobs:
 
     - name: Test
       run: go test -v ./...
+
+    - name: Test (with Yaegi)
+      run: |
+        curl -sfL https://raw.githubusercontent.com/traefik/yaegi/master/install.sh | bash -s -- -b $GOPATH/bin v0.9.0
+        # TODO: yaegi test -v ./...

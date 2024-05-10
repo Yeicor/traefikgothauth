@@ -244,8 +244,33 @@ var hex = "0123456789abcdef"
 
 // An encodeState encodes JSON into a bytes.Buffer.
 type encodeState struct {
-	bytes.Buffer // accumulated output
+	buffer bytes.Buffer // accumulated output
 	scratch      [64]byte
+}
+
+// HACK: Add yaegi support...
+func (e *encodeState) Bytes() []byte {
+	return e.buffer.Bytes()
+}
+
+func (e *encodeState) Len() int {
+	return e.buffer.Len()
+}
+
+func (e *encodeState) Write(b []byte) (int, error) {
+	return e.buffer.Write(b)
+}
+
+func (e *encodeState) WriteString(s string) {
+	e.buffer.WriteString(s)
+}
+
+func (e *encodeState) WriteByte(c byte) {
+	e.buffer.WriteByte(c)
+}
+
+func (e *encodeState) Reset() {
+	e.buffer.Reset()
 }
 
 var encodeStatePool sync.Pool
@@ -418,7 +443,7 @@ func marshalerEncoder(e *encodeState, v reflect.Value, quoted bool) {
 	b, err := m.MarshalJSON()
 	if err == nil {
 		// copy JSON into buffer, checking validity.
-		err = compact(&e.Buffer, b, true)
+		err = compact(&e.buffer, b, true)
 	}
 	if err != nil {
 		e.error(&MarshalerError{v.Type(), err})
@@ -435,7 +460,7 @@ func addrMarshalerEncoder(e *encodeState, v reflect.Value, quoted bool) {
 	b, err := m.MarshalJSON()
 	if err == nil {
 		// copy JSON into buffer, checking validity.
-		err = compact(&e.Buffer, b, true)
+		err = compact(&e.buffer, b, true)
 	}
 	if err != nil {
 		e.error(&MarshalerError{v.Type(), err})
