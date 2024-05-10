@@ -26,5 +26,5 @@ jobs:
 
     - name: Test (with Yaegi)
       run: |
-        curl -sfL https://raw.githubusercontent.com/traefik/yaegi/master/install.sh | bash -s -- -b . v0.9.0
-        ./yaegi test -v ./...
+        curl -sfL https://raw.githubusercontent.com/traefik/yaegi/master/install.sh | bash -s -- -d -b . v0.9.0
+        ./yaegi test -v .
