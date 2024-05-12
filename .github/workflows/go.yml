@@ -32,5 +32,5 @@ jobs:
         rsync -av . "$(go env GOPATH)/src/github.com/${{ github.repository }}" --exclude go
         cd "$(go env GOPATH)/src/github.com/${{ github.repository }}"
         # Install and run yaegi test
-        curl -sfL https://raw.githubusercontent.com/traefik/yaegi/master/install.sh | bash -s -- -d -b . v0.9.0
+        curl -sfL https://raw.githubusercontent.com/traefik/yaegi/master/install.sh | bash -s -- -d -b .
         ./yaegi test .
