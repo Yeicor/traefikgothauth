@@ -25,7 +25,7 @@ func (o *Plugin) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		req = gothic.GetContextWithProvider(req, providerConfig.Name)
 
 		// Handle logout requests.
-		if req.URL.Path == providerConfig.LogoutURI.Path {
+		if req.URL.Path == providerConfig.logoutURI.Path {
 			logd("Logging out", "provider", providerConfig.Name)
 			err := gothic.Logout(rw, req)
 			if err != nil {
@@ -41,7 +41,7 @@ func (o *Plugin) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		logd("Completing authentication", "provider", providerConfig.Name)
 		auth, err := CompleteUserAuthNoLogout(rw, req)
 		if err != nil {
-			if req.URL.Path == providerConfig.RedirectURI.Path {
+			if req.URL.Path == providerConfig.redirectURI.Path {
 				loge("Failed to authenticate", "provider", providerConfig.Name, "error", err)
 				http.Error(rw, "Failed to authenticate", http.StatusInternalServerError)
 				return
@@ -49,14 +49,14 @@ func (o *Plugin) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 				logd("Not authenticated", "provider", providerConfig.Name, "error", err)
 				// Handle login requests that specify the providerConfig.
 				// NOTE: Handling them here avoids possible infinite loop when redirecting to the login url
-				if req.URL.Path == providerConfig.AuthURI.Path {
+				if req.URL.Path == providerConfig.authURI.Path {
 					o.runBeginAuthHandler(rw, req, providerConfig)
 					return
 				}
 				continue
 			}
 		}
-		if req.URL.Path == providerConfig.RedirectURI.Path {
+		if req.URL.Path == providerConfig.redirectURI.Path {
 			auth.IDToken = strings.Repeat("*", len(auth.IDToken))
 			auth.AccessToken = strings.Repeat("*", len(auth.AccessToken))
 			auth.AccessTokenSecret = strings.Repeat("*", len(auth.AccessTokenSecret))

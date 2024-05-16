@@ -5,22 +5,17 @@ import (
 	"github.com/Yeicor/traefikgothauth"
 	"log"
 	"net/http"
-	"net/url"
 	"os"
 )
 
 func main() {
 	cfg := traefikgothauth.CreateConfig()
-	parse, err := url.Parse("http://localhost:8080/__goth/twitch/")
-	if err != nil {
-		log.Fatal(err)
-	}
 	cfg.Providers = []*traefikgothauth.ProviderConfig{
 		{
 			Name:        "twitch",
 			ClientKey:   os.Getenv("TWITCH_CLIENT_KEY"),
 			Secret:      os.Getenv("TWITCH_SECRET"),
-			RedirectURI: parse,
+			RedirectURI: "http://localhost:8080/__goth/twitch/",
 		},
 	}
 	cfg.CookieSecret = "secret-for-testing-only"
