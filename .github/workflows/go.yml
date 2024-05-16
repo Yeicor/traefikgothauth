@@ -11,26 +11,26 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Set up Go
-      uses: actions/setup-go@v4
-      with:
-        go-version: 'stable'
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: 'stable'
 
-    - name: Build
-      run: go build -v ./...
+      - name: Build
+        run: go build -v ./...
 
-    - name: Test
-      run: go test -v ./...
+      - name: Test
+        run: go test -v ./...
 
-    - name: Test (with Yaegi)
-      run: |
-        # Prepare GOPATH
-        export GOPATH=$(pwd)/go
-        mkdir -p "$(go env GOPATH)/src/github.com/${{ github.repository }}"
-        rsync -av . "$(go env GOPATH)/src/github.com/${{ github.repository }}" --exclude go --exclude vendor
-        rsync -av vendor/ "$(go env GOPATH)/src/"
-        # Install and run yaegi test
-        curl -sfL https://raw.githubusercontent.com/traefik/yaegi/master/install.sh | bash -s -- -d -b .
-        ./yaegi test .
+      - name: Test (with Yaegi)
+        run: |
+          # Prepare GOPATH
+          export GOPATH=$(pwd)/go
+          mkdir -p "$(go env GOPATH)/src/github.com/${{ github.repository }}"
+          rsync -av . "$(go env GOPATH)/src/github.com/${{ github.repository }}" --exclude go --exclude vendor
+          rsync -av vendor/ "$(go env GOPATH)/src/"
+          # Install and run yaegi test
+          curl -sfL https://raw.githubusercontent.com/traefik/yaegi/master/install.sh | bash -s -- -d -b .
+          ./yaegi test .
