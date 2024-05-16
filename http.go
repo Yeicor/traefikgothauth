@@ -2,7 +2,6 @@ package traefikgothauth
 
 import (
 	"bytes"
-	"context"
 	"errors"
 	"fmt"
 	"github.com/markbates/goth"
@@ -22,9 +21,8 @@ func (o *OIDC) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		}
 		logt("Request", "method", req.Method, "url", req.URL.String(), "remote", req.RemoteAddr, "sessionKeys", sessionKeys)
 	}
-	baseContext := req.Context()
 	for _, providerConfig := range o.config.Providers {
-		req = req.WithContext(context.WithValue(baseContext, "provider", providerConfig.Name))
+		req = gothic.GetContextWithProvider(req, providerConfig.Name)
 
 		// Handle logout requests.
 		if req.URL.Path == providerConfig.LogoutURI.Path {
@@ -135,7 +133,7 @@ func (o *OIDC) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 func (o *OIDC) runBeginAuthHandler(rw http.ResponseWriter, req *http.Request, providerConfig *ProviderConfig) {
 	logd("Authenticating", "provider", providerConfig.Name)
-	req.WithContext(context.WithValue(req.Context(), "provider", providerConfig.Name))
+	req = gothic.GetContextWithProvider(req, providerConfig.Name)
 	redirectSession, err := o.redirectStore.New(req, gothic.SessionName+"_redirect")
 	if err == nil {
 		redirectSession.Values["path"] = req.RequestURI
@@ -145,7 +143,6 @@ func (o *OIDC) runBeginAuthHandler(rw http.ResponseWriter, req *http.Request, pr
 		logw("Could not save redirect path", "error", err.Error())
 	}
 	gothic.BeginAuthHandler(rw, req)
-	return
 }
 
 func fillRawData(auth *goth.User) {
