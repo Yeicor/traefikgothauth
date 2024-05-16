@@ -1,4 +1,4 @@
-displayName: "OIDC auth"
+displayName: "Traefik Goth Auth"
 type: "middleware"
 iconPath: ".github/icon.png"
 

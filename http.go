@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-func (o *OIDC) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+func (o *Plugin) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	if logtEnabled() {
 		session, _ := gothic.Store.Get(req, gothic.SessionName)
 		sessionKeys := make([]string, 0, len(session.Values))
@@ -131,7 +131,7 @@ func (o *OIDC) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func (o *OIDC) runBeginAuthHandler(rw http.ResponseWriter, req *http.Request, providerConfig *ProviderConfig) {
+func (o *Plugin) runBeginAuthHandler(rw http.ResponseWriter, req *http.Request, providerConfig *ProviderConfig) {
 	logd("Authenticating", "provider", providerConfig.Name)
 	req = gothic.GetContextWithProvider(req, providerConfig.Name)
 	redirectSession, err := o.redirectStore.New(req, gothic.SessionName+"_redirect")

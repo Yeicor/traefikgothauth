@@ -6,15 +6,15 @@ import (
 	"net/http"
 )
 
-// OIDC is the OpenID Connect plugin.
-type OIDC struct {
+// Plugin is the Traefik Goth Auth plugin.
+type Plugin struct {
 	next          http.Handler
 	config        *Config
 	providersInfo []*ProviderInfo
 	redirectStore sessions.Store
 }
 
-// New created a New OIDC plugin.
+// New created a New Plugin plugin.
 //
 //goland:noinspection GoUnusedParameter
 func New(ctx context.Context, next http.Handler, config *Config, name string) (http.Handler, error) {
@@ -25,7 +25,7 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 	redirectStore := sessions.NewCookieStore([]byte(config.CookieSecret))
 	*redirectStore.Options = *config.CookieOptions // Copy
 	redirectStore.Options.MaxAge = 0               // Session only
-	return &OIDC{
+	return &Plugin{
 		next:          next,
 		config:        config,
 		providersInfo: providers,
