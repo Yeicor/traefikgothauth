@@ -1,13 +1,16 @@
 displayName: "OIDC auth"
 type: "middleware"
-iconPath: ".assets/icon.png"
+iconPath: ".github/icon.png"
 
-import: "github.com/Yeicor/traefikoidc"
+import: "github.com/Yeicor/traefikgothauth"
 
-summary: 'OpenID Connect client (Relying Party) auth for Traefik.'
+summary: 'Multi-provider authentication plugin for Traefik, thanks to Goth.'
 
 testData:
-  AuthorizationEndpoint: "https://accounts.google.com"
-  TokenEndpoint: "TODO"
-  ClientID: "YOUR_CLIENT"
-  ClientSecret: "YOUR_SECRET"
+  Providers:
+    - Name: "google"
+      ClientKey: "YOUR_CLIENT_ID"
+      ClientSecret: "YOUR_SECRET"
+      RedirectURI: "https://yourdomain.com/__goth/google/"
+    # More providers...
+  CookieSecret: "ANY_PRIVATE_SECRET"

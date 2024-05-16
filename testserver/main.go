@@ -2,34 +2,45 @@ package main
 
 import (
 	"context"
-	"github.com/Yeicor/traefikoidc"
-	"log/slog"
+	"github.com/Yeicor/traefikgothauth"
+	"log"
 	"net/http"
+	"net/url"
 	"os"
 )
 
 func main() {
-	cfg := traefikoidc.CreateConfig()
-	cfg.AuthorizationEndpoint = os.Getenv("OIDC_AUTHORIZATION_ENDPOINT")
-	cfg.TokenEndpoint = os.Getenv("OIDC_TOKEN_ENDPOINT")
-	cfg.ClientID = os.Getenv("OIDC_CLIENT_ID")
-	cfg.ClientSecret = os.Getenv("OIDC_CLIENT_SECRET")
-
-	backend := http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		// Dump the full request as the body of the response
-		err := req.Write(rw)
-		if err != nil {
-			slog.Error("Error writing response", "error", err)
-		}
-	})
-
-	handler, err := traefikoidc.New(context.Background(), backend, cfg, "oidc-plugin")
+	cfg := traefikgothauth.CreateConfig()
+	parse, err := url.Parse("http://localhost:8080/__goth/twitch/")
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
+	}
+	cfg.Providers = []*traefikgothauth.ProviderConfig{
+		{
+			Name:        "twitch",
+			ClientKey:   os.Getenv("TWITCH_CLIENT_KEY"),
+			Secret:      os.Getenv("TWITCH_SECRET"),
+			RedirectURI: parse,
+		},
+	}
+	cfg.CookieSecret = "secret-for-testing-only"
+	cfg.LogLevel = "trace"
+
+	handler, err := traefikgothauth.New(context.Background(), http.HandlerFunc(backend), cfg, "oidc-plugin")
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	err = http.ListenAndServe(":8080", handler)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
+	}
+}
+
+func backend(rw http.ResponseWriter, req *http.Request) {
+	// Dump the full request as the body of the response
+	err := req.Write(rw)
+	if err != nil {
+		log.Println("Error writing response", "error", err)
 	}
 }

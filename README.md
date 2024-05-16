@@ -1,7 +1,13 @@
-# Traefik OIDC
+# Traefik Goth Auth
 
-OpenID Connect client (Relying Party) auth for Traefik.
+Multi-provider authentication plugin for Traefik, thanks to [Goth](https://github.com/markbates/goth). Features:
 
-It provides all claims from the ID Token as headers to the next middleware/service.
+- Only/any authenticated users can reach the next middleware/service.
+- All available information of the user is published as headers. 
+  - Use this to filter authorized accounts with other middlewares.
+- If multiple configuration providers are configured, an initial selection screen is shown.
+- Once logged in a cookie will avoid the need to contact the provider for a configurable amount of time.
+- Configuration documentation is available [here](config.go).
+- Available providers:
 
-Configuration docs: https://github.com/Yeicor/traefik-oidc/blob/master/oidc.go#L17-L32
+![providers.png](.github/providers.png)
