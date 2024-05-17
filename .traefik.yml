@@ -11,6 +11,6 @@ testData:
     - Name: "discord"
       ClientKey: "YOUR_CLIENT_ID"
       ClientSecret: "YOUR_SECRET"
-      RedirectURI: "https://yourdomain.com/__goth/google/"
+      RedirectURI: "https://yourdomain.com/__goth/discord/"
     # More providers...
-  CookieSecret: "ANY_PRIVATE_SECRET"
+  CookieSecret: "ANY_SECRET"
