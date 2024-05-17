@@ -8,7 +8,7 @@ summary: 'Multi-provider authentication plugin for Traefik, thanks to Goth.'
 
 testData:
   Providers:
-    - Name: "nextcloud"
+    - Name: "discord"
       ClientKey: "YOUR_CLIENT_ID"
       ClientSecret: "YOUR_SECRET"
       RedirectURI: "https://yourdomain.com/__goth/google/"
