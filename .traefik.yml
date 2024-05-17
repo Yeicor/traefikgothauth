@@ -1,4 +1,4 @@
-displayName: "Traefik Goth Auth"
+displayName: "Goth-based multi-provider auth"
 type: "middleware"
 iconPath: ".github/icon.png"
 
