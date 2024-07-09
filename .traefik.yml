@@ -7,12 +7,12 @@ import: "github.com/Yeicor/traefikgothauth"
 summary: 'Multi-provider authentication plugin for Traefik, thanks to Goth.'
 
 testData:
-  Provider:
-    Name: "discord"
-    ClientKey: "YOUR_CLIENT_ID"
-    ClientSecret: "YOUR_SECRET"
-    RedirectURI: "https://yourdomain.com/__goth/discord/"
+  ProviderName: "discord"
+  ProviderCallbackURI: "https://yourdomain.com/__goth/"
+  ProviderParams:
+    clientKey: "YOUR_CLIENT_ID"
+    secret: "YOUR_SECRET"
   CookieSecret: "ANY_PRIVATE_SECRET"
   Authorize:
     Regexes:
-      sub: "1234567890|0987654321"
+      user-id: "1234567890|0987654321"
