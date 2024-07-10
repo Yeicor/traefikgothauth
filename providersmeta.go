@@ -4,7 +4,7 @@ import (
 	"github.com/markbates/goth"
 )
 
-//go:generate go run -v bin/providers_gen.go
+//go:generate go run -v bin/providers_gen/main.go
 
 func getProviderInfo(name string) (*ProviderInfo, bool) {
 	for _, p := range allProviders {
