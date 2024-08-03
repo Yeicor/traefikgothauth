@@ -19,6 +19,6 @@ jobs:
           go-version: 'stable'
 
       - name: Golangci-lint
-        uses: golangci/golangci-lint-action@v6.0.1
+        uses: golangci/golangci-lint-action@v6.1.0
         with:
           version: latest
