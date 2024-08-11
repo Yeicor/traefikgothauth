@@ -22,7 +22,11 @@ func (o *Plugin) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		logt("Request", "method", req.Method, "url", req.URL.String(), "remote", req.RemoteAddr, "sessionKeys", sessionKeys)
 	}
 	for _, providerConfig := range o.config.Providers {
-		req = gothic.GetContextWithProvider(req, providerConfig.Name)
+		// Avoid yaegi context collision bug: different types with the same value collide when inserted in the context.
+		// This breaks mux.Vars, provider.Name and other context values.
+		tmpQuery := req.URL.Query()
+		tmpQuery.Set(":provider", providerConfig.Name)
+		req.URL.RawQuery = tmpQuery.Encode()
 
 		// Handle logout requests.
 		if req.URL.Path == providerConfig.logoutURI.Path {
@@ -133,7 +137,9 @@ func (o *Plugin) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 func (o *Plugin) runBeginAuthHandler(rw http.ResponseWriter, req *http.Request, providerConfig *ProviderConfig) {
 	logd("Authenticating", "provider", providerConfig.Name)
-	req = gothic.GetContextWithProvider(req, providerConfig.Name)
+	tmpQuery := req.URL.Query()
+	tmpQuery.Set(":provider", providerConfig.Name)
+	req.URL.RawQuery = tmpQuery.Encode()
 	redirectSession, err := o.redirectStore.New(req, gothic.SessionName+"_redirect")
 	if err == nil {
 		redirectSession.Values["path"] = req.RequestURI
