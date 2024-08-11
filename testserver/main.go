@@ -10,20 +10,16 @@ import (
 
 func main() {
 	cfg := traefikgothauth.CreateConfig()
-	cfg.LogLevel = "trace"
-	cfg.ProviderName = "twitch"
-	cfg.ProviderCallback = "http://localhost:8080/__goth/"
-	cfg.ProviderParams = map[string]interface{}{
-		"clientKey": os.Getenv("TWITCH_CLIENT_KEY"),
-		"secret":    os.Getenv("TWITCH_SECRET"),
-	}
-	cfg.CookieSecret = "secret-for-testing-only"
-	cfg.ClaimsPrefix = "X-User-"
-	cfg.Authorize = &traefikgothauth.AuthorizeConfig{
-		Regexes: map[string]string{
-			"user-id": "000000000", // Only allow user 000000000
+	cfg.Providers = []*traefikgothauth.ProviderConfig{
+		{
+			Name:        "twitch",
+			ClientKey:   os.Getenv("TWITCH_CLIENT_KEY"),
+			Secret:      os.Getenv("TWITCH_SECRET"),
+			RedirectURI: "http://localhost:8080/__goth/twitch/",
 		},
 	}
+	cfg.CookieSecret = "secret-for-testing-only"
+	cfg.LogLevel = "trace"
 
 	handler, err := traefikgothauth.New(context.Background(), http.HandlerFunc(backend), cfg, "oidc-plugin")
 	if err != nil {

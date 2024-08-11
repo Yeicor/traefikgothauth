@@ -10,7 +10,7 @@ import (
 type Plugin struct {
 	next          http.Handler
 	config        *Config
-	providersInfo *ProviderInfo
+	providersInfo []*ProviderInfo
 	redirectStore sessions.Store
 }
 

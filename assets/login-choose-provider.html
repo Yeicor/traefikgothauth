@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Login</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+<div class="login-box">
+    <div class="login-box-title">Login</div>
+    <div class="login-box-buttons">
+        {{range $key,$value:=.}}
+        <a class="btn" <!--href="/__goth/{{$value.Name}}/login/"-->>
+            <img <!--src="{{$value.Icon}}"--> alt="icon">
+            {{$value.DisplayName}}
+        </a>
+        {{end}}
+    </div>
+</div>
+<style>
+    @import "./login-choose-provider.css";
+</style>
+</body>
+</html>

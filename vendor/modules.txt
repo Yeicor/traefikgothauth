@@ -1,3 +1,5 @@
+# github.com/gorilla/context v1.1.2
+## explicit; go 1.20
 # github.com/gorilla/mux v1.8.1
 ## explicit; go 1.20
 github.com/gorilla/mux
@@ -6,13 +8,13 @@ github.com/gorilla/mux
 # github.com/gorilla/securecookie v1.1.2
 ## explicit; go 1.20
 github.com/gorilla/securecookie
-# github.com/gorilla/sessions v1.3.0
+# github.com/gorilla/sessions v1.2.2
 ## explicit; go 1.20
 github.com/gorilla/sessions
 # github.com/markbates/going v1.0.3
 ## explicit
 github.com/markbates/going/defaults
-# github.com/markbates/goth v1.80.0
+# github.com/markbates/goth v1.79.0
 ## explicit; go 1.18
 github.com/markbates/goth
 github.com/markbates/goth/gothic
@@ -76,10 +78,7 @@ github.com/markbates/goth/providers/zoom
 # github.com/mrjones/oauth v0.0.0-20190623134757-126b35219450
 ## explicit
 github.com/mrjones/oauth
-# github.com/sethvargo/go-envconfig v1.1.0
-## explicit; go 1.20
-github.com/sethvargo/go-envconfig
-# golang.org/x/oauth2 v0.21.0
+# golang.org/x/oauth2 v0.20.0
 ## explicit; go 1.18
 golang.org/x/oauth2
 golang.org/x/oauth2/internal

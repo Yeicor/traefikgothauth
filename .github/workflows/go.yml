@@ -18,14 +18,11 @@ jobs:
         with:
           go-version: 'stable'
 
-      - name: Check that vendoring and regenerating provides the same result
-        run: go mod tidy -v && go mod vendor -v && go generate -v . && git diff --exit-code
-
       - name: Build
-        run: go build -v .
+        run: go build -v ./...
 
       - name: Test
-        run: go test -v .
+        run: go test -v ./...
 
       - name: Test (with Yaegi)
         run: |

@@ -14,11 +14,6 @@ import (
 	"github.com/gorilla/securecookie"
 )
 
-const (
-	// File name prefix for session files.
-	sessionFilePrefix = "session_"
-)
-
 // Store is an interface for custom session stores.
 //
 // See CookieStore and FilesystemStore for examples.
@@ -54,10 +49,8 @@ func NewCookieStore(keyPairs ...[]byte) *CookieStore {
 	cs := &CookieStore{
 		Codecs: securecookie.CodecsFromPairs(keyPairs...),
 		Options: &Options{
-			Path:     "/",
-			MaxAge:   86400 * 30,
-			SameSite: http.SameSiteNoneMode,
-			Secure:   true,
+			Path:   "/",
+			MaxAge: 86400 * 30,
 		},
 	}
 
@@ -264,7 +257,7 @@ func (s *FilesystemStore) save(session *Session) error {
 	if err != nil {
 		return err
 	}
-	filename := filepath.Join(s.path, sessionFilePrefix+filepath.Base(session.ID))
+	filename := filepath.Join(s.path, "session_"+session.ID)
 	fileMutex.Lock()
 	defer fileMutex.Unlock()
 	return os.WriteFile(filename, []byte(encoded), 0600)
@@ -272,7 +265,7 @@ func (s *FilesystemStore) save(session *Session) error {
 
 // load reads a file and decodes its content into session.Values.
 func (s *FilesystemStore) load(session *Session) error {
-	filename := filepath.Join(s.path, sessionFilePrefix+filepath.Base(session.ID))
+	filename := filepath.Join(s.path, "session_"+session.ID)
 	fileMutex.RLock()
 	defer fileMutex.RUnlock()
 	fdata, err := os.ReadFile(filepath.Clean(filename))
@@ -288,7 +281,7 @@ func (s *FilesystemStore) load(session *Session) error {
 
 // delete session file
 func (s *FilesystemStore) erase(session *Session) error {
-	filename := filepath.Join(s.path, sessionFilePrefix+filepath.Base(session.ID))
+	filename := filepath.Join(s.path, "session_"+session.ID)
 
 	fileMutex.RLock()
 	defer fileMutex.RUnlock()

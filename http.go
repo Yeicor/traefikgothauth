@@ -1,9 +1,9 @@
 package traefikgothauth
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
-	"github.com/gorilla/mux"
 	"github.com/markbates/goth"
 	"github.com/markbates/goth/gothic"
 	"net/http"
@@ -21,87 +21,119 @@ func (o *Plugin) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		}
 		logt("Request", "method", req.Method, "url", req.URL.String(), "remote", req.RemoteAddr, "sessionKeys", sessionKeys)
 	}
-	req = gothic.GetContextWithProvider(req, o.config.ProviderName)
-	req = mux.SetURLVars(req, map[string]string{}) // Avoid yaegi bug
+	for _, providerConfig := range o.config.Providers {
+		req = gothic.GetContextWithProvider(req, providerConfig.Name)
 
-	// Handle logout requests.
-	if o.config.LogoutURI != "" && req.URL.Path == o.config.logoutURI.Path {
-		logd("Logging out")
-		err := gothic.Logout(rw, req)
-		if err != nil {
-			loge("Failed to logout", "error", err)
-			http.Error(rw, "Failed to logout", http.StatusInternalServerError)
+		// Handle logout requests.
+		if req.URL.Path == providerConfig.logoutURI.Path {
+			logd("Logging out", "provider", providerConfig.Name)
+			err := gothic.Logout(rw, req)
+			if err != nil {
+				loge("Failed to logout", "provider", providerConfig.Name, "error", err)
+				http.Error(rw, "Failed to logout", http.StatusInternalServerError)
+				return
+			}
+			http.Redirect(rw, req, "/", http.StatusTemporaryRedirect)
 			return
 		}
-		http.ServeContent(rw, req, "index.html", time.Now(), strings.NewReader("Logged out successfully!"))
-		return
-	}
 
-	// Detect unauthenticated requests and begin the authentication process.
-	logd("Checking authentication")
-	auth, err := CompleteUserAuthNoLogout(rw, req)
-	if err != nil {
-		if req.URL.Path == o.config.providerCallback.Path {
-			loge("Failed to authenticate", "error", err)
-			http.Error(rw, "Failed to authenticate", http.StatusInternalServerError)
-		} else {
-			// NOTE: Handling them here avoids possible infinite loop when failing after redirecting to the
-			// providerCallback url as that matches the previous if statement.
-			o.runBeginAuthHandler(rw, req)
-		}
-		return
-	}
-
-	// Handle the callback from the provider, redirect to the initial URL after login success.
-	if req.URL.Path == o.config.providerCallback.Path {
-		// We authenticated successfully, check authorization!
-		if o.config.Authorize != nil {
-			fillRawData(&auth)
-			for key, regex := range o.config.Authorize.regexes {
-				if !regex.MatchString(fmt.Sprint(auth.RawData[key])) {
-					loge("Unauthorized user tried to log in", "bad-key", key, "bad-value", fmt.Sprint(auth.RawData[key]))
-					// If authorization fails, never send the cookie to the client as it gives unconditional access!
-					rw.Header().Del("Set-Cookie")
-					http.Error(rw, "Unauthorized user", http.StatusForbidden)
+		// Handle callback/redirect_uri requests, and normal requests that are already authenticated.
+		logd("Completing authentication", "provider", providerConfig.Name)
+		auth, err := CompleteUserAuthNoLogout(rw, req)
+		if err != nil {
+			if req.URL.Path == providerConfig.redirectURI.Path {
+				loge("Failed to authenticate", "provider", providerConfig.Name, "error", err)
+				http.Error(rw, "Failed to authenticate", http.StatusInternalServerError)
+				return
+			} else {
+				logd("Not authenticated", "provider", providerConfig.Name, "error", err)
+				// Handle login requests that specify the providerConfig.
+				// NOTE: Handling them here avoids possible infinite loop when redirecting to the login url
+				if req.URL.Path == providerConfig.authURI.Path {
+					o.runBeginAuthHandler(rw, req, providerConfig)
 					return
 				}
+				continue
 			}
 		}
-		// Redirect to initial URL after login success!
-		redirectPath := "/" // Default if it cannot be recovered
-		redirectSession, err := gothic.Store.Get(req, gothic.SessionName+"_redirect")
-		if err == nil {
-			redirectPathTmp, ok := redirectSession.Values["path"].(string)
-			if ok {
-				redirectPath = redirectPathTmp
-			} else {
-				err = errors.New("could not get the path value from the redirect session cookie")
+		if req.URL.Path == providerConfig.redirectURI.Path {
+			auth.IDToken = strings.Repeat("*", len(auth.IDToken))
+			auth.AccessToken = strings.Repeat("*", len(auth.AccessToken))
+			auth.AccessTokenSecret = strings.Repeat("*", len(auth.AccessTokenSecret))
+			auth.RefreshToken = strings.Repeat("*", len(auth.RefreshToken))
+			// Redirect to initial URL after login success!
+			redirectPath := "/" // Default if it cannot be recovered
+			redirectSession, err := gothic.Store.Get(req, gothic.SessionName+"_redirect")
+			if err == nil {
+				redirectPathTmp, ok := redirectSession.Values["path"].(string)
+				if ok {
+					redirectPath = redirectPathTmp
+				} else {
+					err = errors.New("could not get the path value from the redirect session cookie")
+				}
 			}
+			if err != nil {
+				logw("Could not recover the redirect path", "error", err.Error())
+			}
+			logi("User just logged in", "provider", providerConfig.Name, "user", fmt.Sprintf("%+v", auth), "redirect", redirectPath)
+			http.Redirect(rw, req, redirectPath, http.StatusTemporaryRedirect)
+			return
 		}
-		if err != nil {
-			logw("Could not recover the redirect path", "error", err.Error())
-		}
-		logi("User just logged in!", "user", fmt.Sprintf("%+v", auth.RawData), "redirect", redirectPath)
-		http.Redirect(rw, req, redirectPath, http.StatusTemporaryRedirect)
-		return
-	}
 
-	// We are authenticated with this provider, publish claims (if enabled) and finish!
-	if o.config.ClaimsPrefix != "__NO__" {
+		// We are authenticated with this provider, publish claims and finish!
 		fillRawData(&auth)
-		logt("Publishing claims for next http handler", "claims", fmt.Sprintf("%+v", auth.RawData))
+		logt("Publishing claims for next http handler", "provider", providerConfig.Name, "claims", fmt.Sprintf("%+v", auth.RawData))
 		for key, value := range auth.RawData {
 			headerKey := http.CanonicalHeaderKey(o.config.ClaimsPrefix + invalidHeader.ReplaceAllString(key, "-"))
 			req.Header.Add(headerKey, fmt.Sprintf("%v", value))
 		}
+
+		// Authentication completed, run the next handler.
+		o.next.ServeHTTP(rw, req)
+		return
 	}
 
-	// Authentication completed, run the next handler.
-	o.next.ServeHTTP(rw, req)
+	// We could not authenticate with any provider, select one to start the authentication.
+	var autoBeginAuthFor *ProviderConfig
+	if len(o.config.Providers) == 1 {
+		autoBeginAuthFor = o.config.Providers[0]
+	} else if req.URL.Query().Has("provider") {
+		search := req.URL.Query().Get("provider")
+		for _, provider := range o.config.Providers {
+			if search == provider.Name {
+				autoBeginAuthFor = provider
+				break
+			}
+		}
+		if autoBeginAuthFor == nil {
+			loge("Provider not found", "provider", search)
+			http.Error(rw, "Invalid provider", http.StatusBadRequest)
+			return
+		}
+	}
+	//autoBeginAuthFor = nil
+	//o.providersInfo = allProviders
+	if autoBeginAuthFor != nil {
+		// Log in with the selected provider without an intermediate page
+		o.runBeginAuthHandler(rw, req, autoBeginAuthFor)
+	} else {
+		// Show a page for the user to choose the provider
+		if loginChooseProviderHtmlCache == nil {
+			tmp := &bytes.Buffer{}
+			err := loginChooseProviderHtml.Execute(tmp, o.providersInfo)
+			if err != nil {
+				http.Error(rw, err.Error(), http.StatusInternalServerError)
+			}
+			loginChooseProviderHtmlCache = bytes.NewReader(tmp.Bytes())
+			loginChooseProviderHtmlCacheTime = time.Now()
+		}
+		http.ServeContent(rw, req, "login-choose-provider.html", loginChooseProviderHtmlCacheTime, loginChooseProviderHtmlCache)
+	}
 }
 
-func (o *Plugin) runBeginAuthHandler(rw http.ResponseWriter, req *http.Request) {
-	logd("Starting new authentication")
+func (o *Plugin) runBeginAuthHandler(rw http.ResponseWriter, req *http.Request, providerConfig *ProviderConfig) {
+	logd("Authenticating", "provider", providerConfig.Name)
+	req = gothic.GetContextWithProvider(req, providerConfig.Name)
 	redirectSession, err := o.redirectStore.New(req, gothic.SessionName+"_redirect")
 	if err == nil {
 		redirectSession.Values["path"] = req.RequestURI
@@ -128,10 +160,8 @@ func fillRawData(auth *goth.User) {
 	auth.RawData["avatar-url"] = auth.AvatarURL
 	auth.RawData["location"] = auth.Location
 	//auth.RawData["access-token"] = auth.AccessToken
-	//auth.RawData["access-token-secret"] = auth.AccessTokenSecret
 	//auth.RawData["refresh-token"] = auth.RefreshToken
 	auth.RawData["expires-at"] = auth.ExpiresAt
-	//auth.RawData["id-token"] = auth.IDToken
 	// Drop empty values
 	for key, value := range auth.RawData {
 		if value == "" {
@@ -141,3 +171,6 @@ func fillRawData(auth *goth.User) {
 }
 
 var invalidHeader = regexp.MustCompile("[^a-zA-Z0-9-]+") // Also removing _ from headers
+
+var loginChooseProviderHtmlCache *bytes.Reader
+var loginChooseProviderHtmlCacheTime time.Time

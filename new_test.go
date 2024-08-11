@@ -5,23 +5,16 @@ import (
 	"github.com/Yeicor/traefikgothauth"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 )
 
 func TestDemo(t *testing.T) {
 	cfg := traefikgothauth.CreateConfig()
-	cfg.ProviderName = "twitch"
-	cfg.ProviderCallback = "http://localhost:8080/__goth/twitch/"
-	cfg.ProviderParams = map[string]interface{}{
-		"clientKey": os.Getenv("TWITCH_CLIENT_KEY"),
-		"secret":    os.Getenv("TWITCH_SECRET"),
-	}
 
 	ctx := context.Background()
 	next := http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {})
 
-	handler, err := traefikgothauth.New(ctx, next, cfg, "oidc")
+	handler, err := traefikgothauth.New(ctx, next, cfg, "oidc-plugin")
 	if err != nil {
 		t.Fatal(err)
 	}
