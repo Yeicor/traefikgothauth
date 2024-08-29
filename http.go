@@ -88,8 +88,14 @@ func (o *Plugin) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		fillRawData(&auth)
 		logt("Publishing claims for next http handler", "provider", providerConfig.Name, "claims", fmt.Sprintf("%+v", auth.RawData))
 		for key, value := range auth.RawData {
-			headerKey := http.CanonicalHeaderKey(o.config.ClaimsPrefix + invalidHeader.ReplaceAllString(key, "-"))
-			req.Header.Add(headerKey, fmt.Sprintf("%v", value))
+			headerKey := o.config.ClaimsPrefix + invalidHeader.ReplaceAllString(key, "-")
+			valueStr := fmt.Sprintf("%v", value)
+			// Detect and log attempts to overwrite headers (client tries to overwrite the header with a different value).
+			if prevValueStr := req.Header.Get(headerKey); prevValueStr != "" {
+				logw("Client tried to overwrite header (ignoring it)", "provider", providerConfig.Name, "header", headerKey, "old", prevValueStr, "new", valueStr)
+			}
+			// Always set the header, even if it is already set.
+			req.Header.Set(headerKey, valueStr)
 		}
 
 		// Authentication completed, run the next handler.

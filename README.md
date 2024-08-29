@@ -1,5 +1,8 @@
 # Traefik Goth Auth
 
+> **Warning**   
+> This plugin should be considered as experimental. It is not yet tested in production environments.
+
 Multi-provider authentication plugin for Traefik, thanks to [Goth](https://github.com/markbates/goth). Features:
 
 - Only/any authenticated users can reach the next middleware/service.
