@@ -13,5 +13,5 @@ require (
 	github.com/gorilla/securecookie v1.1.2 // indirect
 	github.com/markbates/going v1.0.3 // indirect
 	github.com/mrjones/oauth v0.0.0-20190623134757-126b35219450 // indirect
-	golang.org/x/oauth2 v0.20.0 // indirect
+	golang.org/x/oauth2 v0.22.0 // indirect
 )
