@@ -12,7 +12,7 @@ github.com/gorilla/sessions
 # github.com/markbates/going v1.0.3
 ## explicit
 github.com/markbates/going/defaults
-# github.com/markbates/goth v1.79.0
+# github.com/markbates/goth v1.80.0
 ## explicit; go 1.18
 github.com/markbates/goth
 github.com/markbates/goth/gothic
