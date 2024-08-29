@@ -1,9 +1,11 @@
 module github.com/Yeicor/traefikgothauth
 
-go 1.22
+go 1.23
+
+toolchain go1.23.0
 
 require (
-	github.com/gorilla/sessions v1.2.2
+	github.com/gorilla/sessions v1.4.0
 	github.com/markbates/goth v1.80.0
 )
 
