@@ -1,10 +1,7 @@
-// Copyright 2012 The Gorilla Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style
-// license that can be found in the LICENSE file.
+//go:build !go1.11
+// +build !go1.11
 
 package sessions
-
-import "net/http"
 
 // Options stores configuration for a session or session store.
 //
@@ -16,9 +13,7 @@ type Options struct {
 	// deleted after the browser session ends.
 	// MaxAge<0 means delete cookie immediately.
 	// MaxAge>0 means Max-Age attribute present and given in seconds.
-	MaxAge      int
-	Secure      bool
-	HttpOnly    bool
-	Partitioned bool
-	SameSite    http.SameSite
+	MaxAge   int
+	Secure   bool
+	HttpOnly bool
 }
